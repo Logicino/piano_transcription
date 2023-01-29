@@ -28,20 +28,21 @@ def pack_maestro_dataset_to_hdf5(args):
     sample_rate = config.sample_rate
 
     # Paths
-    csv_path = os.path.join(dataset_dir, 'maestro-v2.0.0.csv')
-    waveform_hdf5s_dir = os.path.join(workspace, 'hdf5s', 'maestro')
+    # csv_path = os.path.join(dataset_dir, 'maestro-v2.0.0.csv')
+    csv_path = os.path.join(dataset_dir, 'maestro-v3.0.0.csv')
+    waveform_hdf5s_dir = os.path.join(workspace, 'hdf5s', 'maestro') # /data/xyth/piano_transcription/hdf5s/maestro/
 
     logs_dir = os.path.join(workspace, 'logs', get_filename(__file__))
     create_logging(logs_dir, filemode='w')
     logging.info(args)
 
     # Read meta dict
-    meta_dict = read_metadata(csv_path)
+    meta_dict = read_metadata(csv_path) # 读csv表
 
-    audios_num = len(meta_dict['canonical_composer'])
+    audios_num = len(meta_dict['canonical_composer']) # 获取列表曲目数
     logging.info('Total audios number: {}'.format(audios_num))
 
-    feature_time = time.time()
+    feature_time = time.time() # 返回当前时间的时间戳（1970纪元后经过的浮点秒数）
 
     # Load & resample each audio file to a hdf5 file
     for n in range(audios_num):
@@ -53,8 +54,10 @@ def pack_maestro_dataset_to_hdf5(args):
 
         # Load audio
         audio_path = os.path.join(dataset_dir, meta_dict['audio_filename'][n])
-        (audio, _) = librosa.core.load(audio_path, sr=sample_rate, mono=True)
+        (audio, _) = librosa.core.load(audio_path, sr=sample_rate, mono=True) # 读音频文件，resample
 
+        # waveform_hdf5s_dir = /data/xyth/piano_transcription/hdf5s/maestro/
+        # os.path.splitext：在.的地方分割字符串
         packed_hdf5_path = os.path.join(waveform_hdf5s_dir, '{}.h5'.format(
             os.path.splitext(meta_dict['audio_filename'][n])[0]))
 
@@ -145,6 +148,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='')
     subparsers = parser.add_subparsers(dest='mode')
 
+    # 子命令，是用的时候直接：python 文件名.py 子命令名
     parser_pack_maestro = subparsers.add_parser('pack_maestro_dataset_to_hdf5')
     parser_pack_maestro.add_argument('--dataset_dir', type=str, required=True, help='Directory of dataset.')
     parser_pack_maestro.add_argument('--workspace', type=str, required=True, help='Directory of your workspace.')

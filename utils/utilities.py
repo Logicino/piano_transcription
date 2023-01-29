@@ -70,12 +70,14 @@ def create_logging(log_dir, filemode):
     
     return logging
 
-
+# 将数据格式转为numpy int16类型（目前音频处理的大多存储类型）
 def float32_to_int16(x):
+    # 保证x在 -1～1 的区间内
     assert np.max(np.abs(x)) <= 1.
+    # astype: 强制转化数据类型
     return (x * 32767.).astype(np.int16)
 
-
+# audio = audio.astype(np.float32, order='C') / 32768.0 <- 将浮点音频标准化，缩放到 -1~1
 def int16_to_float32(x):
     return (x / 32767.).astype(np.float32)
     
@@ -86,6 +88,10 @@ def pad_truncate_sequence(x, max_len):
     else:
         return x[0 : max_len]
 
+# csv read function
+#def utf_8_encoder(unicode_csv_data):
+#    for line in unicode_csv_data:
+#        yield line.encode('utf-8')
 
 def read_metadata(csv_path):
     """Read metadata of MAESTRO dataset from csv file.
@@ -106,6 +112,7 @@ def read_metadata(csv_path):
 
     with open(csv_path, 'r') as fr:
         reader = csv.reader(fr, delimiter=',')
+        # reader = csv.reader(utf_8_encoder(fr), delimiter=',')
         lines = list(reader)
 
     meta_dict = {'canonical_composer': [], 'canonical_title': [], 'split': [], 
@@ -142,7 +149,7 @@ def read_midi(midi_path):
         'midi_event_time': [0., 0, 0.98307292, ...]}
     """
 
-    midi_file = MidiFile(midi_path)
+    midi_file = MidiFile(midi_path)  # 读出midipath的Midi文件
     ticks_per_beat = midi_file.ticks_per_beat
 
     assert len(midi_file.tracks) == 2

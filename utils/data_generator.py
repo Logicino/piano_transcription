@@ -71,7 +71,7 @@ class MaestroDataset(object):
             'pedal_frame_roll': (frames_num,)}
         """
         [year, hdf5_name, start_time] = meta
-        hdf5_path = os.path.join(self.hdf5s_dir, year, hdf5_name)
+        hdf5_path = os.path.join(self.hdf5s_dir, year, hdf5_name) # hdf5s_dir = piano_transcription/hdf5s/maestro, +year+name = /2004/曲名
          
         data_dict = {}
 
@@ -83,7 +83,7 @@ class MaestroDataset(object):
             start_sample = int(start_time * self.sample_rate)
             end_sample = start_sample + self.segment_samples
 
-            if end_sample >= hf['waveform'].shape[0]:
+            if end_sample >= hf['waveform'].shape[0]: # shape[0]，矩阵的行数
                 start_sample -= self.segment_samples
                 end_sample -= self.segment_samples
 
