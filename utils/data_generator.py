@@ -15,7 +15,7 @@ from utilities import (create_folder, int16_to_float32, traverse_folder,
 import config
 
 
-class MaestroDataset(object):
+class MaestroDataset(object):     # 继承object类，一种编程习惯，继承object的是新式类
     def __init__(self, hdf5s_dir, segment_seconds, frames_per_second, 
         max_note_shift=0, augmentor=None):
         """This class takes the meta of an audio segment as input, and return 
@@ -73,6 +73,7 @@ class MaestroDataset(object):
         [year, hdf5_name, start_time] = meta
         hdf5_path = os.path.join(self.hdf5s_dir, year, hdf5_name) # hdf5s_dir = piano_transcription/hdf5s/maestro, +year+name = /2004/曲名
          
+        # 输出要写的data_dict
         data_dict = {}
 
         note_shift = self.random_state.randint(low=-self.max_note_shift, 
@@ -83,16 +84,17 @@ class MaestroDataset(object):
             start_sample = int(start_time * self.sample_rate)
             end_sample = start_sample + self.segment_samples
 
-            if end_sample >= hf['waveform'].shape[0]: # shape[0]，矩阵的行数
+            if end_sample >= hf['waveform'].shape[0]: # shape[0]，矩阵的行数，这里就是waveform波形的长度（帧数）；\\
+                                                      # 如果结束的sample位置大于波形长度；读进来的hf里是int16格式
                 start_sample -= self.segment_samples
                 end_sample -= self.segment_samples
 
-            waveform = int16_to_float32(hf['waveform'][start_sample : end_sample])
+            waveform = int16_to_float32(hf['waveform'][start_sample : end_sample]) # 将hdf5s里存储的int16格式的waveform转成float32格式
 
             if self.augmentor:
                 waveform = self.augmentor.augment(waveform)
 
-            if note_shift != 0:
+            if note_shift != 0:  # 数据集扩增：增加变调
                 """Augment pitch"""
                 waveform = librosa.effects.pitch_shift(waveform, self.sample_rate, 
                     note_shift, bins_per_octave=12)

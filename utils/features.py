@@ -74,7 +74,7 @@ def pack_maestro_dataset_to_hdf5(args):
 
             hf.create_dataset(name='midi_event', data=[e.encode() for e in midi_dict['midi_event']], dtype='S100')
             hf.create_dataset(name='midi_event_time', data=midi_dict['midi_event_time'], dtype=np.float32)
-            hf.create_dataset(name='waveform', data=float32_to_int16(audio), dtype=np.int16)
+            hf.create_dataset(name='waveform', data=float32_to_int16(audio), dtype=np.int16)  # 用int16读进hf文件里
         
     logging.info('Write hdf5 to {}'.format(packed_hdf5_path))
     logging.info('Time: {:.3f} s'.format(time.time() - feature_time))
