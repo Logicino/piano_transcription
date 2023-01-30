@@ -15,7 +15,7 @@ from utilities import (create_folder, int16_to_float32, traverse_folder,
 import config
 
 
-class MaestroDataset(object):     # 继承object类，一种编程习惯，继承object的是新式类
+class MaestroDataset(object):     # 继承object类，一种编程习惯，继承object的是新式类；在python3中所有类都是新式类
     def __init__(self, hdf5s_dir, segment_seconds, frames_per_second, 
         max_note_shift=0, augmentor=None):
         """This class takes the meta of an audio segment as input, and return 
@@ -24,8 +24,8 @@ class MaestroDataset(object):     # 继承object类，一种编程习惯，继�
         
         Args:
           feature_hdf5s_dir: str
-          segment_seconds: float
-          frames_per_second: int
+          segment_seconds: float   分成片段，每段的长度（s）
+          frames_per_second: int    每s的帧数
           max_note_shift: int, number of semitone for pitch augmentation
           augmentor: object
         """
@@ -73,7 +73,7 @@ class MaestroDataset(object):     # 继承object类，一种编程习惯，继�
         [year, hdf5_name, start_time] = meta
         hdf5_path = os.path.join(self.hdf5s_dir, year, hdf5_name) # hdf5s_dir = piano_transcription/hdf5s/maestro, +year+name = /2004/曲名
          
-        # 输出要写的data_dict
+        # 输出变量：要写的data_dict
         data_dict = {}
 
         note_shift = self.random_state.randint(low=-self.max_note_shift, 
@@ -81,6 +81,7 @@ class MaestroDataset(object):     # 继承object类，一种编程习惯，继�
 
         # Load hdf5
         with h5py.File(hdf5_path, 'r') as hf:
+            # start_sample: 计算开始的帧
             start_sample = int(start_time * self.sample_rate)
             end_sample = start_sample + self.segment_samples
 
@@ -101,7 +102,7 @@ class MaestroDataset(object):     # 继承object类，一种编程习惯，继�
 
             data_dict['waveform'] = waveform
 
-            midi_events = [e.decode() for e in hf['midi_event'][:]]
+            midi_events = [e.decode() for e in hf['midi_event'][:]]  # .decode() 字符串编码转换
             midi_events_time = hf['midi_event_time'][:]
 
             # Process MIDI events to target
@@ -192,7 +193,7 @@ class Sampler(object):
                     start_time = 0
                     while (start_time + self.segment_seconds < hf.attrs['duration']):
                         self.segment_list.append([year, audio_name, start_time])
-                        start_time += self.hop_seconds
+                        start_time += self.hop_seconds   # 更新下一个start_time，加入间隔hop_seconds(在config里)
                     
                     n += 1
                     if mini_data and n == 10:

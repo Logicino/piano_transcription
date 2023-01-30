@@ -65,7 +65,7 @@ def train(args):
     segment_samples = int(segment_seconds * sample_rate)
     frames_per_second = config.frames_per_second
     classes_num = config.classes_num
-    num_workers = 8
+    num_workers = 8    # 加载DataLoader的并行进程数量 设置为0表示加载数据时使用单进程，默认主进程
 
     # Loss function
     loss_func = get_loss_func(loss_type)
@@ -116,21 +116,28 @@ def train(args):
     else:
         raise Exception('Incorrect argumentation!')
     
-    # Dataset
+    # Dataset 
+    # ---数据集制作---
+    # 声明数据集。MaestroDataset是在data_generator里写好的一个类，用于将hdf5s格式的数据集读出来？
     train_dataset = MaestroDataset(hdf5s_dir=hdf5s_dir, 
         segment_seconds=segment_seconds, frames_per_second=frames_per_second, 
         max_note_shift=max_note_shift, augmentor=augmentor)
+    # 训练集有augmentor：移调测试
 
     evaluate_dataset = MaestroDataset(hdf5s_dir=hdf5s_dir, 
         segment_seconds=segment_seconds, frames_per_second=frames_per_second, 
         max_note_shift=0)
+    # 测试集没有augmentor，其余的参数和训练集一样
 
     # Sampler for training
+    # 训练集采样
     train_sampler = Sampler(hdf5s_dir=hdf5s_dir, split='train', 
         segment_seconds=segment_seconds, hop_seconds=hop_seconds, 
         batch_size=batch_size, mini_data=mini_data)
 
     # Sampler for evaluation
+    # 测试集采样 为什么evalu要分train，validation和test？
+    # 推测应该evalu其实是另外一个过程
     evaluate_train_sampler = TestSampler(hdf5s_dir=hdf5s_dir, 
         split='train', segment_seconds=segment_seconds, hop_seconds=hop_seconds, 
         batch_size=batch_size, mini_data=mini_data)

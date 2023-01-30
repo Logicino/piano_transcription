@@ -234,7 +234,7 @@ class TargetProcessor(object):
         self.frames_per_second = frames_per_second
         self.begin_note = begin_note
         self.classes_num = classes_num
-        self.max_piano_note = self.classes_num - 1
+        self.max_piano_note = self.classes_num - 1 # 0~87一共88个
 
     def process(self, start_time, midi_events_time, midi_events, 
         extend_pedal=True, note_shift=0):
