@@ -40,7 +40,7 @@ class MaestroDataset(object):     # 继承object类，一种编程习惯，继�
         self.augmentor = augmentor
 
         self.random_state = np.random.RandomState(1234)
-
+        # 这里传进来的是一个函数方法
         self.target_processor = TargetProcessor(self.segment_seconds, 
             self.frames_per_second, self.begin_note, self.classes_num)
         """Used for processing MIDI events to target."""

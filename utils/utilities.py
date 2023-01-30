@@ -282,7 +282,13 @@ class TargetProcessor(object):
         """
 
         # ------ 1. Parse MIDI events ------
+        
+        # 这一段是找到对于给定的segment，它的开始和结束的帧在midi_events_times里的序号
+        
         # Search the begin index of a segment
+        
+        # 要求检测到的event_time小于start_time
+        # start_time：segment的开始时间
         for bgn_idx, event_time in enumerate(midi_events_time):
             if event_time > start_time:
                 break
@@ -293,6 +299,7 @@ class TargetProcessor(object):
             if event_time > start_time + self.segment_seconds:
                 break
         """E.g., start_time: 709.0, bgn_idx: 18196, event_time: 719.0115"""
+
 
         note_events = []
         """E.g. [
@@ -306,26 +313,33 @@ class TargetProcessor(object):
             {'onset_time': 696.8063, 'offset_time': 698.50836}, 
             ...]"""
 
+        # buffer_dict: 建立一个88维数组，检测一对onset和offset
         buffer_dict = {}    # Used to store onset of notes to be paired with offsets
         pedal_dict = {}     # Used to store onset of pedal to be paired with offset of pedal
 
+        # 这里定义了一个ex_bgn_idx变量，用于搜索跨段踏板和音符事件
         # Backtrack bgn_idx to earlier indexes: ex_bgn_idx, which is used for 
         # searching cross segment pedal and note events. E.g.: bgn_idx: 1149, 
         # ex_bgn_idx: 981
-        _delta = int((fin_idx - bgn_idx) * 1.)  
-        ex_bgn_idx = max(bgn_idx - _delta, 0)
+        _delta = int((fin_idx - bgn_idx) * 1.)   # 计算差值delta，为音符结束fin_idx - 音符开始bgn_idx
+        ex_bgn_idx = max(bgn_idx - _delta, 0)    # 去考虑前一个这么长的距离，作为ex_bgn_idx
         
         for i in range(ex_bgn_idx, fin_idx):
-            # Parse MIDI messiage
-            attribute_list = midi_events[i].split(' ')
+            # Parse MIDI message
+            attribute_list = midi_events[i].split(' ') 
+            # midi_events[i] = note_on channel=0 note=64 velocity=81 time=4
+            # 因此，attribute_list = [note_on, channel=0, note=64, velocity=81, time=4]
 
             # Note
             if attribute_list[0] in ['note_on', 'note_off']:
                 """E.g. attribute_list: ['note_on', 'channel=0', 'note=41', 'velocity=0', 'time=10']"""
 
+                # 音高
                 midi_note = int(attribute_list[2].split('=')[1])
+                # 力度
                 velocity = int(attribute_list[3].split('=')[1])
 
+                # 找到一对onset和offset，以键值对的形式存储到note_events的列表里
                 # Onset
                 if attribute_list[0] == 'note_on' and velocity > 0:
                     buffer_dict[midi_note] = {
@@ -377,17 +391,20 @@ class TargetProcessor(object):
             note_events = self.extend_pedal(note_events, pedal_events)
         
         # Prepare targets
-        frames_num = int(round(self.segment_seconds * self.frames_per_second)) + 1
-        onset_roll = np.zeros((frames_num, self.classes_num))
+        frames_num = int(round(self.segment_seconds * self.frames_per_second)) + 1       # 片段秒数 * 每秒帧数
+        onset_roll = np.zeros((frames_num, self.classes_num))       # 建立一个零矩阵，帧数长 x 类别数（钢琴总共88个音数）
         offset_roll = np.zeros((frames_num, self.classes_num))
+        
         reg_onset_roll = np.ones((frames_num, self.classes_num))
         reg_offset_roll = np.ones((frames_num, self.classes_num))
+        
         frame_roll = np.zeros((frames_num, self.classes_num))
         velocity_roll = np.zeros((frames_num, self.classes_num))
+        
         mask_roll = np.ones((frames_num, self.classes_num))
         """mask_roll is used for masking out cross segment notes"""
 
-        pedal_onset_roll = np.zeros(frames_num)
+        pedal_onset_roll = np.zeros(frames_num)        #  因为踏板跟音高无关，只跟帧数（时间）有关系
         pedal_offset_roll = np.zeros(frames_num)
         reg_pedal_onset_roll = np.ones(frames_num)
         reg_pedal_offset_roll = np.ones(frames_num)
@@ -398,18 +415,19 @@ class TargetProcessor(object):
         for note_event in note_events:
             """note_event: e.g., {'midi_note': 60, 'onset_time': 722.0719, 'offset_time': 722.47815, 'velocity': 103}"""
 
-            piano_note = np.clip(note_event['midi_note'] - self.begin_note + note_shift, 0, self.max_piano_note) 
+            piano_note = np.clip(note_event['midi_note'] - self.begin_note + note_shift, 0, self.max_piano_note)  # 将midi_note数据条限制在钢琴的88个键里面
             """There are 88 keys on a piano"""
 
             if 0 <= piano_note <= self.max_piano_note:
+                # 计算这个音符的开始和结束所在的帧
                 bgn_frame = int(round((note_event['onset_time'] - start_time) * self.frames_per_second))
                 fin_frame = int(round((note_event['offset_time'] - start_time) * self.frames_per_second))
 
                 if fin_frame >= 0:
-                    frame_roll[max(bgn_frame, 0) : fin_frame + 1, piano_note] = 1
+                    frame_roll[max(bgn_frame, 0) : fin_frame + 1, piano_note] = 1   # 将frame_roll的第bgn_frame至fin_frame + 1， 在piano_note上设置为1
 
-                    offset_roll[fin_frame, piano_note] = 1
-                    velocity_roll[max(bgn_frame, 0) : fin_frame + 1, piano_note] = note_event['velocity']
+                    offset_roll[fin_frame, piano_note] = 1        # 将offset_roll的第fin_frame，在piano_note上设置为1
+                    velocity_roll[max(bgn_frame, 0) : fin_frame + 1, piano_note] = note_event['velocity']    # 标注velocity_roll（力度）
 
                     # Vector from the center of a frame to ground truth offset
                     reg_offset_roll[fin_frame, piano_note] = \
